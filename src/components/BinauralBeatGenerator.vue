@@ -10,7 +10,26 @@
       <div class="frequency-controls">
         <h2>Frequency Settings</h2>
 
-        <div class="frequency-inputs">
+        <!-- Frequency Input Mode Toggle -->
+        <div class="frequency-mode-toggle">
+          <div class="toggle-buttons">
+            <button
+              @click="frequencyMode = 'leftright'"
+              :class="['mode-btn', { active: frequencyMode === 'leftright' }]"
+            >
+              Left/Right Mode
+            </button>
+            <button
+              @click="frequencyMode = 'carrier'"
+              :class="['mode-btn', { active: frequencyMode === 'carrier' }]"
+            >
+              Carrier + Beat Mode
+            </button>
+          </div>
+        </div>
+
+        <!-- Left/Right Frequency Inputs -->
+        <div v-if="frequencyMode === 'leftright'" class="frequency-inputs">
           <div class="frequency-input">
             <label for="leftFreq">Left Ear (Hz)</label>
             <input
@@ -35,6 +54,46 @@
               max="2000"
               step="0.1"
               @input="updateFrequencies"
+            />
+            <span class="hz-label">Hz</span>
+          </div>
+        </div>
+
+        <!-- Carrier + Beat Frequency Inputs -->
+        <div v-if="frequencyMode === 'carrier'" class="frequency-inputs">
+          <div class="frequency-input">
+            <label for="carrierFreq">
+              Carrier Frequency (Hz)
+              <span class="frequency-hint">Recommended: 200-800 Hz</span>
+            </label>
+            <input
+              id="carrierFreq"
+              v-model.number="manualCarrierFreq"
+              type="number"
+              min="50"
+              max="1500"
+              step="0.1"
+              @input="updateFromCarrier"
+            />
+            <span class="hz-label">Hz</span>
+            <div v-if="carrierWarning" class="frequency-warning">
+              {{ carrierWarning }}
+            </div>
+          </div>
+
+          <div class="frequency-input">
+            <label for="beatFreq">
+              Binaural Beat (Hz)
+              <span class="frequency-hint">Difference between ears</span>
+            </label>
+            <input
+              id="beatFreq"
+              v-model.number="manualBeatFreq"
+              type="number"
+              min="0.1"
+              max="50"
+              step="0.1"
+              @input="updateFromCarrier"
             />
             <span class="hz-label">Hz</span>
           </div>
@@ -376,13 +435,18 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue"
+import { ref, computed, watch, onMounted, onUnmounted } from "vue"
 
 // Reactive data
 const leftFrequency = ref(440)
 const rightFrequency = ref(445)
 const volume = ref(50)
 const isPlaying = ref(false)
+
+// Carrier frequency mode
+const frequencyMode = ref("leftright") // 'leftright' or 'carrier'
+const manualCarrierFreq = ref(442.5) // Manual carrier frequency
+const manualBeatFreq = ref(5) // Manual beat frequency
 const whiteNoiseEnabled = ref(false)
 const pinkNoiseEnabled = ref(false)
 const whiteNoiseVolume = ref(20)
@@ -525,6 +589,9 @@ const binauralBeatFrequency = computed(() => {
 })
 
 const carrierFrequency = computed(() => {
+  if (frequencyMode.value === "carrier") {
+    return manualCarrierFreq.value
+  }
   return (leftFrequency.value + rightFrequency.value) / 2
 })
 
@@ -535,6 +602,16 @@ const beatType = computed(() => {
   if (diff < 13) return "Alpha (8-13 Hz) - Relaxation"
   if (diff < 30) return "Beta (13-30 Hz) - Focus"
   return "Gamma (30+ Hz) - High Focus"
+})
+
+// Carrier frequency validation
+const carrierWarning = computed(() => {
+  const freq = manualCarrierFreq.value
+  if (freq < 100) return "⚠️ Very low carrier frequency - may be less effective"
+  if (freq > 1000) return "⚠️ High carrier frequency - may be uncomfortable"
+  if (freq < 200)
+    return "💡 Tip: 200-800 Hz range is most effective for most people"
+  return ""
 })
 
 // Session computed properties
@@ -799,6 +876,47 @@ const formatTime = (seconds) => {
   return `${mins}:${secs.toString().padStart(2, "0")}`
 }
 
+// Frequency mode methods
+const updateFromCarrier = () => {
+  if (frequencyMode.value !== "carrier") return
+
+  const carrier = manualCarrierFreq.value
+  const beat = manualBeatFreq.value
+
+  // Calculate left and right frequencies from carrier and beat
+  leftFrequency.value = carrier - beat / 2
+  rightFrequency.value = carrier + beat / 2
+
+  // Ensure frequencies stay within valid range
+  if (leftFrequency.value < 20) {
+    leftFrequency.value = 20
+    rightFrequency.value = 20 + beat
+    manualCarrierFreq.value = (leftFrequency.value + rightFrequency.value) / 2
+  }
+  if (rightFrequency.value > 2000) {
+    rightFrequency.value = 2000
+    leftFrequency.value = 2000 - beat
+    manualCarrierFreq.value = (leftFrequency.value + rightFrequency.value) / 2
+  }
+
+  updateFrequencies()
+}
+
+const syncManualValues = () => {
+  // Sync manual values when switching from left/right mode
+  if (frequencyMode.value === "carrier") {
+    manualCarrierFreq.value = (leftFrequency.value + rightFrequency.value) / 2
+    manualBeatFreq.value = Math.abs(rightFrequency.value - leftFrequency.value)
+  }
+}
+
+// Watch for frequency mode changes
+const handleFrequencyModeChange = () => {
+  if (frequencyMode.value === "carrier") {
+    syncManualValues()
+  }
+}
+
 // Session management methods
 const loadPreset = () => {
   if (selectedPreset.value === "manual") {
@@ -1003,6 +1121,12 @@ const cancelEdit = () => {
 // Initialize volume
 onMounted(() => {
   updateVolume()
+  syncManualValues() // Initialize manual values
+})
+
+// Watch frequency mode changes
+watch(frequencyMode, () => {
+  handleFrequencyModeChange()
 })
 
 // Cleanup on unmount
@@ -1022,6 +1146,7 @@ onUnmounted(() => {
   margin: 0 auto;
   padding: 20px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #2c3e50;
 }
 
 .app-header {
@@ -1060,6 +1185,63 @@ onUnmounted(() => {
   color: #2c3e50;
 }
 
+/* Frequency Mode Toggle */
+.frequency-mode-toggle {
+  margin-bottom: 20px;
+}
+
+.toggle-buttons {
+  display: flex;
+  gap: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #ced4da;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 10px 16px;
+  background: #f8f9fa;
+  color: #495057;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+  border-right: 1px solid #ced4da;
+}
+
+.mode-btn:last-child {
+  border-right: none;
+}
+
+.mode-btn:hover {
+  background: #e9ecef;
+  color: #2c3e50;
+}
+
+.mode-btn.active {
+  background: #007bff;
+  color: white;
+}
+
+.frequency-hint {
+  font-size: 12px;
+  color: #6c757d;
+  font-weight: normal;
+  display: block;
+  margin-top: 2px;
+}
+
+.frequency-warning {
+  font-size: 12px;
+  color: #856404;
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 4px;
+  padding: 4px 8px;
+  margin-top: 5px;
+}
+
 .frequency-inputs {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1083,6 +1265,8 @@ onUnmounted(() => {
   border: 1px solid #ced4da;
   border-radius: 4px;
   font-size: 16px;
+  color: #495057;
+  background: white;
 }
 
 .hz-label {
@@ -1095,6 +1279,7 @@ onUnmounted(() => {
   padding: 15px;
   border-radius: 4px;
   border: 1px solid #dee2e6;
+  color: #495057;
 }
 
 .data-item {
@@ -1170,6 +1355,7 @@ onUnmounted(() => {
   padding: 15px;
   border-radius: 4px;
   border: 1px solid #dee2e6;
+  color: #495057;
 }
 
 .noise-options {
@@ -1318,6 +1504,7 @@ onUnmounted(() => {
   padding: 15px;
   border-radius: 4px;
   border: 1px solid #dee2e6;
+  color: #495057;
 }
 
 .progress-bar {
@@ -1346,6 +1533,7 @@ onUnmounted(() => {
   padding: 15px;
   border-radius: 4px;
   border: 1px solid #dee2e6;
+  color: #495057;
 }
 
 .session-info h4 {
@@ -1514,6 +1702,7 @@ onUnmounted(() => {
   background: #f8f9fa;
   padding: 20px;
   border-radius: 4px;
+  color: #495057;
 }
 
 .form-group {
@@ -1532,6 +1721,8 @@ onUnmounted(() => {
   padding: 8px 12px;
   border: 1px solid #ced4da;
   border-radius: 4px;
+  color: #495057;
+  background: white;
 }
 
 .stages-section {
@@ -1549,6 +1740,7 @@ onUnmounted(() => {
   border-radius: 4px;
   padding: 15px;
   margin-bottom: 15px;
+  color: #495057;
 }
 
 .stage-header {
@@ -1600,6 +1792,8 @@ onUnmounted(() => {
   border: 1px solid #ced4da;
   border-radius: 4px;
   font-size: 14px;
+  color: #495057;
+  background: white;
 }
 
 .add-stage-btn {

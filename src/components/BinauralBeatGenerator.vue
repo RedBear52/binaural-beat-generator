@@ -57,6 +57,91 @@
         </div>
       </div>
 
+      <!-- Session Controls -->
+      <div class="session-controls">
+        <h2>Session Settings</h2>
+
+        <!-- Preset Selection -->
+        <div class="preset-selection">
+          <label for="presetSelect">Choose Preset:</label>
+          <select
+            id="presetSelect"
+            v-model="selectedPreset"
+            @change="loadPreset"
+            :disabled="isPlaying"
+          >
+            <option value="manual">Manual Mode</option>
+            <option
+              v-for="preset in presets"
+              :key="preset.id"
+              :value="preset.id"
+            >
+              {{ preset.name }}
+            </option>
+          </select>
+          <button
+            @click="showPresetEditor = true"
+            class="edit-preset-btn"
+            :disabled="isPlaying"
+          >
+            ✏️ Edit Presets
+          </button>
+        </div>
+
+        <!-- Session Timer -->
+        <div class="session-timer">
+          <div class="timer-controls">
+            <label for="sessionDuration">Session Duration:</label>
+            <select
+              id="sessionDuration"
+              v-model="sessionDuration"
+              :disabled="isPlaying"
+            >
+              <option value="0">Continuous</option>
+              <option value="300">5 minutes</option>
+              <option value="600">10 minutes</option>
+              <option value="900">15 minutes</option>
+              <option value="1200">20 minutes</option>
+              <option value="1800">30 minutes</option>
+              <option value="2700">45 minutes</option>
+              <option value="3600">60 minutes</option>
+            </select>
+          </div>
+
+          <div class="timer-display" v-if="sessionDuration > 0">
+            <div class="progress-bar">
+              <div
+                class="progress-fill"
+                :style="{ width: sessionProgress + '%' }"
+              ></div>
+            </div>
+            <div class="time-remaining">
+              {{ formatTime(timeRemaining) }} remaining
+            </div>
+          </div>
+        </div>
+
+        <!-- Current Session Info -->
+        <div
+          class="session-info"
+          v-if="selectedPreset !== 'manual' && currentProgram"
+        >
+          <h4>Current Program: {{ currentProgram.name }}</h4>
+          <div class="program-stage" v-if="currentStage">
+            <span class="stage-label">Stage {{ currentStageIndex + 1 }}:</span>
+            <span class="stage-description">{{
+              currentStage.description
+            }}</span>
+            <div class="stage-progress">
+              <div class="stage-time">
+                {{ formatTime(stageTimeElapsed) }} /
+                {{ formatTime(currentStage.duration) }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Audio Player Controls -->
       <div class="player-controls">
         <h2>Audio Controls</h2>
@@ -145,6 +230,147 @@
         <span class="status-label">Duration:</span>
         <span class="status-value">{{ formatTime(playTime) }}</span>
       </div>
+      <div class="status-item" v-if="sessionDuration > 0">
+        <span class="status-label">Session Progress:</span>
+        <span class="status-value">{{ Math.round(sessionProgress) }}%</span>
+      </div>
+    </div>
+
+    <!-- Preset Editor Modal -->
+    <div
+      v-if="showPresetEditor"
+      class="modal-overlay"
+      @click="closePresetEditor"
+    >
+      <div class="preset-editor-modal" @click.stop>
+        <div class="modal-header">
+          <h3>Edit Presets</h3>
+          <button @click="closePresetEditor" class="close-btn">✕</button>
+        </div>
+
+        <div class="modal-content">
+          <div class="preset-list">
+            <h4>Existing Presets</h4>
+            <div v-for="preset in presets" :key="preset.id" class="preset-item">
+              <div class="preset-info">
+                <strong>{{ preset.name }}</strong>
+                <span class="preset-description">{{ preset.description }}</span>
+                <span class="preset-duration">{{
+                  formatTime(preset.duration)
+                }}</span>
+              </div>
+              <div class="preset-actions">
+                <button @click="editPreset(preset)" class="edit-btn">
+                  Edit
+                </button>
+                <button @click="deletePreset(preset.id)" class="delete-btn">
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="create-preset">
+            <h4>{{ editingPreset ? "Edit Preset" : "Create New Preset" }}</h4>
+            <div class="preset-form">
+              <div class="form-group">
+                <label>Name:</label>
+                <input
+                  v-model="newPreset.name"
+                  type="text"
+                  placeholder="Preset name"
+                />
+              </div>
+              <div class="form-group">
+                <label>Description:</label>
+                <input
+                  v-model="newPreset.description"
+                  type="text"
+                  placeholder="Brief description"
+                />
+              </div>
+
+              <div class="stages-section">
+                <h5>Program Stages</h5>
+                <div
+                  v-for="(stage, index) in newPreset.stages"
+                  :key="index"
+                  class="stage-editor"
+                >
+                  <div class="stage-header">
+                    <h6>Stage {{ index + 1 }}</h6>
+                    <button
+                      @click="removeStage(index)"
+                      class="remove-stage-btn"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <div class="stage-controls">
+                    <div class="control-group">
+                      <label>Description:</label>
+                      <input
+                        v-model="stage.description"
+                        type="text"
+                        placeholder="Stage description"
+                      />
+                    </div>
+                    <div class="control-group">
+                      <label>Duration (minutes):</label>
+                      <input
+                        v-model.number="stage.durationMinutes"
+                        type="number"
+                        min="1"
+                        max="60"
+                      />
+                    </div>
+                    <div class="control-group">
+                      <label>Left Frequency (Hz):</label>
+                      <input
+                        v-model.number="stage.leftFreq"
+                        type="number"
+                        min="20"
+                        max="2000"
+                        step="0.1"
+                      />
+                    </div>
+                    <div class="control-group">
+                      <label>Right Frequency (Hz):</label>
+                      <input
+                        v-model.number="stage.rightFreq"
+                        type="number"
+                        min="20"
+                        max="2000"
+                        step="0.1"
+                      />
+                    </div>
+                    <div class="control-group">
+                      <label>Volume (%):</label>
+                      <input
+                        v-model.number="stage.volume"
+                        type="number"
+                        min="0"
+                        max="100"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <button @click="addStage" class="add-stage-btn">
+                  Add Stage
+                </button>
+              </div>
+
+              <div class="form-actions">
+                <button @click="savePreset" class="save-btn">
+                  {{ editingPreset ? "Update" : "Create" }} Preset
+                </button>
+                <button @click="cancelEdit" class="cancel-btn">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -162,6 +388,124 @@ const pinkNoiseEnabled = ref(false)
 const whiteNoiseVolume = ref(20)
 const pinkNoiseVolume = ref(20)
 const playTime = ref(0)
+
+// Session and preset data
+const selectedPreset = ref("manual")
+const sessionDuration = ref(0)
+const sessionStartTime = ref(0)
+const showPresetEditor = ref(false)
+const editingPreset = ref(null)
+const currentProgram = ref(null)
+const currentStageIndex = ref(0)
+const stageStartTime = ref(0)
+
+// Default presets
+const presets = ref([
+  {
+    id: "focus",
+    name: "Deep Focus",
+    description: "20-minute focus enhancement program",
+    duration: 1200,
+    stages: [
+      {
+        description: "Preparation",
+        duration: 300,
+        leftFreq: 100,
+        rightFreq: 110,
+        volume: 40,
+        durationMinutes: 5,
+      },
+      {
+        description: "Focus Building",
+        duration: 600,
+        leftFreq: 120,
+        rightFreq: 135,
+        volume: 50,
+        durationMinutes: 10,
+      },
+      {
+        description: "Deep Focus",
+        duration: 300,
+        leftFreq: 140,
+        rightFreq: 158,
+        volume: 45,
+        durationMinutes: 5,
+      },
+    ],
+  },
+  {
+    id: "meditation",
+    name: "Meditation",
+    description: "15-minute meditation program",
+    duration: 900,
+    stages: [
+      {
+        description: "Relaxation",
+        duration: 300,
+        leftFreq: 200,
+        rightFreq: 206,
+        volume: 35,
+        durationMinutes: 5,
+      },
+      {
+        description: "Deep Meditation",
+        duration: 600,
+        leftFreq: 150,
+        rightFreq: 154,
+        volume: 40,
+        durationMinutes: 10,
+      },
+    ],
+  },
+  {
+    id: "sleep",
+    name: "Sleep Preparation",
+    description: "30-minute sleep induction program",
+    duration: 1800,
+    stages: [
+      {
+        description: "Wind Down",
+        duration: 600,
+        leftFreq: 300,
+        rightFreq: 308,
+        volume: 30,
+        durationMinutes: 10,
+      },
+      {
+        description: "Theta Waves",
+        duration: 600,
+        leftFreq: 200,
+        rightFreq: 206,
+        volume: 25,
+        durationMinutes: 10,
+      },
+      {
+        description: "Delta Waves",
+        duration: 600,
+        leftFreq: 100,
+        rightFreq: 103,
+        volume: 20,
+        durationMinutes: 10,
+      },
+    ],
+  },
+])
+
+// Preset editor data
+const newPreset = ref({
+  name: "",
+  description: "",
+  stages: [
+    {
+      description: "",
+      duration: 300,
+      leftFreq: 440,
+      rightFreq: 445,
+      volume: 50,
+      durationMinutes: 5,
+    },
+  ],
+})
 
 // Audio context and nodes
 let audioContext = null
@@ -191,6 +535,28 @@ const beatType = computed(() => {
   if (diff < 13) return "Alpha (8-13 Hz) - Relaxation"
   if (diff < 30) return "Beta (13-30 Hz) - Focus"
   return "Gamma (30+ Hz) - High Focus"
+})
+
+// Session computed properties
+const sessionProgress = computed(() => {
+  if (sessionDuration.value === 0 || !isPlaying.value) return 0
+  const elapsed = playTime.value
+  return Math.min((elapsed / sessionDuration.value) * 100, 100)
+})
+
+const timeRemaining = computed(() => {
+  if (sessionDuration.value === 0) return 0
+  return Math.max(sessionDuration.value - playTime.value, 0)
+})
+
+const currentStage = computed(() => {
+  if (!currentProgram.value || !currentProgram.value.stages) return null
+  return currentProgram.value.stages[currentStageIndex.value] || null
+})
+
+const stageTimeElapsed = computed(() => {
+  if (!isPlaying.value || !currentStage.value) return 0
+  return playTime.value - stageStartTime.value
 })
 
 // Methods
@@ -329,8 +695,12 @@ const startPlayback = async () => {
 
     isPlaying.value = true
     playTime.value = 0
+    sessionStartTime.value = Date.now()
+    stageStartTime.value = 0
+
     playTimer = setInterval(() => {
       playTime.value++
+      checkSessionProgress()
     }, 1000)
   } catch (error) {
     console.error("Error starting playback:", error)
@@ -427,6 +797,207 @@ const formatTime = (seconds) => {
   const mins = Math.floor(seconds / 60)
   const secs = seconds % 60
   return `${mins}:${secs.toString().padStart(2, "0")}`
+}
+
+// Session management methods
+const loadPreset = () => {
+  if (selectedPreset.value === "manual") {
+    currentProgram.value = null
+    sessionDuration.value = 0
+    return
+  }
+
+  const preset = presets.value.find((p) => p.id === selectedPreset.value)
+  if (preset) {
+    currentProgram.value = preset
+    sessionDuration.value = preset.duration
+    currentStageIndex.value = 0
+
+    // Load first stage settings
+    if (preset.stages && preset.stages.length > 0) {
+      const firstStage = preset.stages[0]
+      leftFrequency.value = firstStage.leftFreq
+      rightFrequency.value = firstStage.rightFreq
+      volume.value = firstStage.volume
+    }
+  }
+}
+
+const checkSessionProgress = () => {
+  if (!isPlaying.value) return
+
+  // Check if session should end
+  if (sessionDuration.value > 0 && playTime.value >= sessionDuration.value) {
+    fadeOutAndStop()
+    return
+  }
+
+  // Check for stage transitions in preset programs
+  if (currentProgram.value && currentStage.value) {
+    const stageElapsed = playTime.value - stageStartTime.value
+
+    if (stageElapsed >= currentStage.value.duration) {
+      // Move to next stage
+      if (currentStageIndex.value < currentProgram.value.stages.length - 1) {
+        currentStageIndex.value++
+        stageStartTime.value = playTime.value
+
+        const nextStage = currentProgram.value.stages[currentStageIndex.value]
+        if (nextStage) {
+          // Smooth transition to next stage
+          transitionToStage(nextStage)
+        }
+      }
+    }
+  }
+}
+
+const transitionToStage = (stage) => {
+  // Gradually transition frequencies and volume
+  const transitionDuration = 5000 // 5 seconds
+  const steps = 50
+  const stepDuration = transitionDuration / steps
+
+  const startLeft = leftFrequency.value
+  const startRight = rightFrequency.value
+  const startVolume = volume.value
+
+  const targetLeft = stage.leftFreq
+  const targetRight = stage.rightFreq
+  const targetVolume = stage.volume
+
+  let currentStep = 0
+
+  const transition = setInterval(() => {
+    currentStep++
+    const progress = currentStep / steps
+
+    leftFrequency.value = startLeft + (targetLeft - startLeft) * progress
+    rightFrequency.value = startRight + (targetRight - startRight) * progress
+    volume.value = startVolume + (targetVolume - startVolume) * progress
+
+    updateFrequencies()
+    updateVolume()
+
+    if (currentStep >= steps) {
+      clearInterval(transition)
+    }
+  }, stepDuration)
+}
+
+const fadeOutAndStop = () => {
+  if (!gainNode) return
+
+  const fadeTime = 3.0 // 3 second fade
+  const currentVolume = gainNode.gain.value
+
+  gainNode.gain.setValueAtTime(currentVolume, audioContext.currentTime)
+  gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + fadeTime)
+
+  setTimeout(() => {
+    stopPlayback()
+    gainNode.gain.setValueAtTime(volume.value / 100, audioContext.currentTime)
+  }, fadeTime * 1000)
+}
+
+// Preset editor methods
+const closePresetEditor = () => {
+  showPresetEditor.value = false
+  cancelEdit()
+}
+
+const editPreset = (preset) => {
+  editingPreset.value = preset
+  newPreset.value = {
+    name: preset.name,
+    description: preset.description,
+    stages: preset.stages.map((stage) => ({
+      ...stage,
+      durationMinutes: stage.duration / 60,
+    })),
+  }
+}
+
+const deletePreset = (presetId) => {
+  if (confirm("Are you sure you want to delete this preset?")) {
+    const index = presets.value.findIndex((p) => p.id === presetId)
+    if (index !== -1) {
+      presets.value.splice(index, 1)
+    }
+  }
+}
+
+const addStage = () => {
+  newPreset.value.stages.push({
+    description: "",
+    duration: 300,
+    leftFreq: 440,
+    rightFreq: 445,
+    volume: 50,
+    durationMinutes: 5,
+  })
+}
+
+const removeStage = (index) => {
+  if (newPreset.value.stages.length > 1) {
+    newPreset.value.stages.splice(index, 1)
+  }
+}
+
+const savePreset = () => {
+  if (!newPreset.value.name.trim()) {
+    alert("Please enter a preset name")
+    return
+  }
+
+  // Convert duration minutes to seconds and calculate total duration
+  const stages = newPreset.value.stages.map((stage) => ({
+    ...stage,
+    duration: stage.durationMinutes * 60,
+  }))
+
+  const totalDuration = stages.reduce((sum, stage) => sum + stage.duration, 0)
+
+  const preset = {
+    id: editingPreset.value ? editingPreset.value.id : Date.now().toString(),
+    name: newPreset.value.name,
+    description: newPreset.value.description,
+    duration: totalDuration,
+    stages,
+  }
+
+  if (editingPreset.value) {
+    // Update existing preset
+    const index = presets.value.findIndex(
+      (p) => p.id === editingPreset.value.id
+    )
+    if (index !== -1) {
+      presets.value[index] = preset
+    }
+  } else {
+    // Add new preset
+    presets.value.push(preset)
+  }
+
+  closePresetEditor()
+}
+
+const cancelEdit = () => {
+  editingPreset.value = null
+  newPreset.value = {
+    name: "",
+    description: "",
+    stages: [
+      {
+        description: "",
+        duration: 300,
+        leftFreq: 440,
+        rightFreq: 445,
+        volume: 50,
+        durationMinutes: 5,
+      },
+    ],
+  }
 }
 
 // Initialize volume
@@ -673,6 +1244,443 @@ onUnmounted(() => {
   .status-display {
     flex-direction: column;
     gap: 10px;
+  }
+}
+
+/* Session Controls Styles */
+.session-controls {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+  color: #242424;
+  margin-bottom: 20px;
+}
+
+.preset-selection {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  color: #242424;
+}
+
+.preset-selection select {
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background: white;
+  min-width: 200px;
+  color: #242424;
+}
+
+.edit-preset-btn {
+  padding: 8px 16px;
+  background: #17a2b8;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.edit-preset-btn:hover:not(:disabled) {
+  background: #138496;
+}
+
+.edit-preset-btn:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+}
+
+.session-timer {
+  margin-bottom: 20px;
+}
+
+.timer-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.timer-controls select {
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background: white;
+  color: #242424;
+}
+
+.timer-display {
+  background: white;
+  padding: 15px;
+  border-radius: 4px;
+  border: 1px solid #dee2e6;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: #e9ecef;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #28a745, #20c997);
+  transition: width 0.3s ease;
+}
+
+.time-remaining {
+  text-align: center;
+  font-weight: 600;
+  color: #495057;
+}
+
+.session-info {
+  background: white;
+  padding: 15px;
+  border-radius: 4px;
+  border: 1px solid #dee2e6;
+}
+
+.session-info h4 {
+  margin: 0 0 10px 0;
+  color: #2c3e50;
+}
+
+.program-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.stage-label {
+  font-weight: 600;
+  color: #495057;
+}
+
+.stage-description {
+  color: #6c757d;
+  font-style: italic;
+}
+
+.stage-progress {
+  margin-top: 8px;
+}
+
+.stage-time {
+  font-size: 14px;
+  color: #007bff;
+  font-weight: 600;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.preset-editor-modal {
+  background: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #2c3e50;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #6c757d;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-btn:hover {
+  color: #495057;
+}
+
+.modal-content {
+  padding: 20px;
+}
+
+.preset-list {
+  margin-bottom: 30px;
+}
+
+.preset-list h4,
+.create-preset h4 {
+  color: #2c3e50;
+  margin-bottom: 15px;
+}
+
+.preset-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+
+.preset-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.preset-info strong {
+  color: #2c3e50;
+}
+
+.preset-description {
+  color: #6c757d;
+  font-size: 14px;
+}
+
+.preset-duration {
+  color: #007bff;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.preset-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.edit-btn,
+.delete-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.edit-btn {
+  background: #ffc107;
+  color: #212529;
+}
+
+.edit-btn:hover {
+  background: #e0a800;
+}
+
+.delete-btn {
+  background: #dc3545;
+  color: white;
+}
+
+.delete-btn:hover {
+  background: #c82333;
+}
+
+.preset-form {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 4px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: #495057;
+}
+
+.form-group input {
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+}
+
+.stages-section {
+  margin-top: 20px;
+}
+
+.stages-section h5 {
+  color: #2c3e50;
+  margin-bottom: 15px;
+}
+
+.stage-editor {
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.stage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.stage-header h6 {
+  margin: 0;
+  color: #2c3e50;
+}
+
+.remove-stage-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.remove-stage-btn:hover {
+  background: #c82333;
+}
+
+.stage-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.control-group label {
+  font-weight: 600;
+  color: #495057;
+  font-size: 14px;
+}
+
+.control-group input {
+  padding: 6px 10px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.add-stage-btn {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.add-stage-btn:hover {
+  background: #218838;
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  justify-content: flex-end;
+}
+
+.save-btn,
+.cancel-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.save-btn {
+  background: #007bff;
+  color: white;
+}
+
+.save-btn:hover {
+  background: #0056b3;
+}
+
+.cancel-btn {
+  background: #6c757d;
+  color: white;
+}
+
+.cancel-btn:hover {
+  background: #545b62;
+}
+
+@media (max-width: 768px) {
+  .preset-selection {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .preset-selection select {
+    min-width: auto;
+  }
+
+  .timer-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .stage-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .preset-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .preset-actions {
+    justify-content: center;
+  }
+
+  .form-actions {
+    flex-direction: column;
   }
 }
 </style>

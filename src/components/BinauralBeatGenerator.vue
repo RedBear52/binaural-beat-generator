@@ -402,11 +402,30 @@
                 class="noise-volume"
               />
             </div>
+
+            <div class="noise-option">
+              <input
+                id="brownNoise"
+                v-model="brownNoiseEnabled"
+                type="checkbox"
+                @change="toggleBrownNoise"
+              />
+              <label for="brownNoise">Brown Noise</label>
+              <input
+                v-if="brownNoiseEnabled"
+                v-model.number="brownNoiseVolume"
+                type="range"
+                min="0"
+                max="50"
+                step="1"
+                @input="updateBrownNoiseVolume"
+                class="noise-volume"
+              />
+            </div>
           </div>
         </div>
       </div>
     </div>
-
     <!-- Status Display -->
     <div class="status-display">
       <div class="status-item">
@@ -581,6 +600,9 @@ const whiteNoiseEnabled = ref(false)
 const pinkNoiseEnabled = ref(false)
 const whiteNoiseVolume = ref(20)
 const pinkNoiseVolume = ref(20)
+const brownNoiseEnabled = ref(false)
+const brownNoiseVolume = ref(20)
+
 const playTime = ref(0)
 
 // Session and preset data
@@ -852,9 +874,11 @@ let leftOscillator = null
 let rightOscillator = null
 let whiteNoiseNode = null
 let pinkNoiseNode = null
+let brownNoiseNode = null
 let gainNode = null
 let whiteNoiseGain = null
 let pinkNoiseGain = null
+let brownNoiseGain = null
 let merger = null
 let playTimer = null
 
@@ -932,6 +956,10 @@ const initAudioContext = () => {
     pinkNoiseGain = audioContext.createGain()
     pinkNoiseGain.gain.value = 0
     pinkNoiseGain.connect(gainNode)
+
+    brownNoiseGain = audioContext.createGain()
+    brownNoiseGain.gain.value = 0
+    brownNoiseGain.connect(gainNode)
   }
 }
 
@@ -1014,6 +1042,34 @@ const createPinkNoise = () => {
   pinkNoiseNode.connect(pinkNoiseGain)
 }
 
+const createBrownNoise = () => {
+  if (!audioContext) return
+
+  const bufferSize = 2 * audioContext.sampleRate
+  const noiseBuffer = audioContext.createBuffer(
+    2,
+    bufferSize,
+    audioContext.sampleRate
+  )
+
+  for (let channel = 0; channel < noiseBuffer.numberOfChannels; channel++) {
+    const output = noiseBuffer.getChannelData(channel)
+    let lastOut = 0.0
+
+    for (let i = 0; i < bufferSize; i++) {
+      const white = Math.random() * 2 - 1
+      output[i] = (lastOut + 0.02 * white) / 1.02
+      lastOut = output[i]
+      output[i] *= 3.5 // Gain compensation
+    }
+  }
+
+  brownNoiseNode = audioContext.createBufferSource()
+  brownNoiseNode.buffer = noiseBuffer
+  brownNoiseNode.loop = true
+  brownNoiseNode.connect(brownNoiseGain)
+}
+
 const togglePlayback = async () => {
   if (!isPlaying.value) {
     await startPlayback()
@@ -1040,6 +1096,11 @@ const startPlayback = async () => {
     if (pinkNoiseEnabled.value) {
       createPinkNoise()
       pinkNoiseNode.start()
+    }
+
+    if (brownNoiseEnabled.value) {
+      createBrownNoise()
+      brownNoiseNode.start()
     }
 
     leftOscillator.start()
@@ -1078,6 +1139,11 @@ const stopPlayback = () => {
   if (pinkNoiseNode) {
     pinkNoiseNode.stop()
     pinkNoiseNode = null
+  }
+
+  if (brownNoiseNode) {
+    brownNoiseNode.stop()
+    brownNoiseNode = null
   }
 
   if (playTimer) {
@@ -1141,6 +1207,27 @@ const updatePinkNoiseVolume = () => {
   if (pinkNoiseGain) {
     pinkNoiseGain.gain.value = pinkNoiseEnabled.value
       ? pinkNoiseVolume.value / 100
+      : 0
+  }
+}
+
+const toggleBrownNoise = () => {
+  if (isPlaying.value) {
+    if (brownNoiseEnabled.value && !brownNoiseNode) {
+      createBrownNoise()
+      brownNoiseNode.start()
+    } else if (!brownNoiseEnabled.value && brownNoiseNode) {
+      brownNoiseNode.stop()
+      brownNoiseNode = null
+    }
+  }
+  updateBrownNoiseVolume()
+}
+
+const updateBrownNoiseVolume = () => {
+  if (brownNoiseGain) {
+    brownNoiseGain.gain.value = brownNoiseEnabled.value
+      ? brownNoiseVolume.value / 100
       : 0
   }
 }

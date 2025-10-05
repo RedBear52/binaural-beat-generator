@@ -143,7 +143,7 @@
             class="edit-preset-btn"
             :disabled="isPlaying"
           >
-            ✏️ Edit Presets
+            Edit Presets
           </button>
         </div>
 
@@ -162,8 +162,10 @@
               <option value="900">15 minutes</option>
               <option value="1200">20 minutes</option>
               <option value="1800">30 minutes</option>
+              <option value="2400">40 minutes</option>
               <option value="2700">45 minutes</option>
               <option value="3600">60 minutes</option>
+              <option value="5400">90 minutes</option>
             </select>
           </div>
 
@@ -291,7 +293,7 @@
                     <span
                       v-else-if="index === currentStageIndex && isPlaying"
                       class="status-active"
-                      >▶</span
+                      >►</span
                     >
                     <span v-else class="status-pending">○</span>
                   </div>
@@ -340,7 +342,7 @@
             @click="togglePlayback"
             :class="['play-btn', { active: isPlaying }]"
           >
-            {{ isPlaying ? "⏸️ Pause" : "▶️ Play" }}
+            {{ isPlaying ? "Pause" : "Play" }}
           </button>
 
           <div class="volume-control">
@@ -453,7 +455,7 @@
       <div class="preset-editor-modal" @click.stop>
         <div class="modal-header">
           <h3>Edit Presets</h3>
-          <button @click="closePresetEditor" class="close-btn">✕</button>
+          <button @click="closePresetEditor" class="close-btn">×</button>
         </div>
 
         <div class="modal-content">
@@ -850,6 +852,104 @@ const presets = ref([
       },
     ],
   },
+  {
+    id: "recovery-healing",
+    name: "Recovery & Healing",
+    description:
+      "40-minute physical recovery session with delta waves for tissue repair",
+    duration: 2400,
+    stages: [
+      {
+        description: "Initial Relaxation",
+        duration: 600,
+        leftFreq: 200,
+        rightFreq: 206,
+        volume: 25,
+        durationMinutes: 10,
+      },
+      {
+        description: "Deep Healing Phase",
+        duration: 1200,
+        leftFreq: 100,
+        rightFreq: 102,
+        volume: 20,
+        durationMinutes: 20,
+      },
+      {
+        description: "Cellular Regeneration",
+        duration: 600,
+        leftFreq: 80,
+        rightFreq: 81.5,
+        volume: 18,
+        durationMinutes: 10,
+      },
+    ],
+  },
+  {
+    id: "pain-relief",
+    name: "Pain Relief",
+    description: "30-minute natural pain management with theta waves",
+    duration: 1800,
+    stages: [
+      {
+        description: "Tension Release",
+        duration: 600,
+        leftFreq: 150,
+        rightFreq: 156,
+        volume: 30,
+        durationMinutes: 10,
+      },
+      {
+        description: "Pain Reduction",
+        duration: 900,
+        leftFreq: 120,
+        rightFreq: 126,
+        volume: 25,
+        durationMinutes: 15,
+      },
+      {
+        description: "Comfort Integration",
+        duration: 300,
+        leftFreq: 100,
+        rightFreq: 104,
+        volume: 22,
+        durationMinutes: 5,
+      },
+    ],
+  },
+  {
+    id: "migraine-relief",
+    name: "Migraine Relief",
+    description:
+      "20-minute headache and migraine relief with theta frequencies",
+    duration: 1200,
+    stages: [
+      {
+        description: "Vascular Relaxation",
+        duration: 300,
+        leftFreq: 140,
+        rightFreq: 146,
+        volume: 20,
+        durationMinutes: 5,
+      },
+      {
+        description: "Pain Dissolution",
+        duration: 600,
+        leftFreq: 110,
+        rightFreq: 116,
+        volume: 18,
+        durationMinutes: 10,
+      },
+      {
+        description: "Gentle Recovery",
+        duration: 300,
+        leftFreq: 90,
+        rightFreq: 94,
+        volume: 15,
+        durationMinutes: 5,
+      },
+    ],
+  },
 ])
 
 // Preset editor data
@@ -906,10 +1006,12 @@ const beatType = computed(() => {
 // Carrier frequency validation
 const carrierWarning = computed(() => {
   const freq = manualCarrierFreq.value
-  if (freq < 100) return "⚠️ Very low carrier frequency - may be less effective"
-  if (freq > 1000) return "⚠️ High carrier frequency - may be uncomfortable"
+  if (freq < 100)
+    return "Warning: Very low carrier frequency - may be less effective"
+  if (freq > 1000)
+    return "Warning: High carrier frequency - may be uncomfortable"
   if (freq < 200)
-    return "💡 Tip: 200-800 Hz range is most effective for most people"
+    return "Tip: 200-800 Hz range is most effective for most people"
   return ""
 })
 

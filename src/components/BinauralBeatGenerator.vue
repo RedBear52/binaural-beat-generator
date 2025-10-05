@@ -1,8 +1,17 @@
 <template>
-  <div class="binaural-generator">
+  <div class="binaural-generator" :class="{ 'dark-mode': isDarkMode }">
     <header class="app-header">
-      <h1>Binaural Beat Generator</h1>
-      <p>Create programmable binaural beats for meditation and focus</p>
+      <div class="header-content">
+        <div class="title-section">
+          <h1>Binaural Beat Generator</h1>
+          <p>Create programmable binaural beats for meditation and focus</p>
+        </div>
+        <div class="theme-toggle">
+          <button @click="toggleDarkMode" class="theme-toggle-btn">
+            {{ isDarkMode ? "☀️" : "🌙" }}
+          </button>
+        </div>
+      </div>
     </header>
 
     <div class="controls-container">
@@ -604,6 +613,9 @@ const whiteNoiseVolume = ref(20)
 const pinkNoiseVolume = ref(20)
 const brownNoiseEnabled = ref(false)
 const brownNoiseVolume = ref(20)
+
+// Dark mode
+const isDarkMode = ref(false)
 
 const playTime = ref(0)
 
@@ -1334,6 +1346,13 @@ const updateBrownNoiseVolume = () => {
   }
 }
 
+// Dark mode toggle
+const toggleDarkMode = () => {
+  isDarkMode.value = !isDarkMode.value
+  // Save preference to localStorage
+  localStorage.setItem("binaural-dark-mode", isDarkMode.value.toString())
+}
+
 const formatTime = (seconds) => {
   const mins = Math.floor(seconds / 60)
   const secs = seconds % 60
@@ -1615,6 +1634,12 @@ const cancelEdit = () => {
 onMounted(() => {
   updateVolume()
   syncManualValues() // Initialize manual values
+
+  // Load dark mode preference
+  const savedDarkMode = localStorage.getItem("binaural-dark-mode")
+  if (savedDarkMode !== null) {
+    isDarkMode.value = savedDarkMode === "true"
+  }
 })
 
 // Watch frequency mode changes
@@ -1675,7 +1700,7 @@ onUnmounted(() => {
 .player-controls h2,
 .noise-controls h3 {
   margin-top: 0;
-  color: #2c3e50;
+  color: #2c3e50 !important;
 }
 
 /* Frequency Mode Toggle */
@@ -1848,7 +1873,6 @@ onUnmounted(() => {
   padding: 15px;
   border-radius: 4px;
   border: 1px solid #dee2e6;
-  color: #495057;
 }
 
 .noise-options {
@@ -2646,5 +2670,268 @@ onUnmounted(() => {
   .form-actions {
     flex-direction: column;
   }
+}
+
+/* Dark Mode Styles */
+.dark-mode {
+  background: #1a1a1a;
+  color: #e0e0e0;
+}
+
+.dark-mode .app-header h1 {
+  color: #ffffff;
+}
+
+.dark-mode .app-header p {
+  color: #b0b0b0;
+}
+
+.dark-mode .theme-toggle {
+  background: #333333;
+  color: #e0e0e0;
+  border: 1px solid #555555;
+}
+
+.dark-mode .theme-toggle:hover {
+  background: #444444;
+  color: #ffffff;
+}
+
+.dark-mode .frequency-controls,
+.dark-mode .player-controls {
+  background: #2a2a2a;
+  border: 1px solid #444444;
+  color: #e0e0e0;
+}
+
+.dark-mode .frequency-controls h2,
+.dark-mode .player-controls h2,
+.dark-mode .noise-controls h3 {
+  color: #ffffff !important;
+}
+
+.dark-mode .mode-btn {
+  background: #333333;
+  color: #e0e0e0;
+  border-color: #555555;
+}
+
+.dark-mode .mode-btn:hover {
+  background: #444444;
+  color: #ffffff;
+}
+
+.dark-mode .mode-btn.active {
+  background: rgb(86, 154, 211);
+  color: white;
+}
+
+.dark-mode .frequency-input label {
+  color: #e0e0e0;
+}
+
+.dark-mode .frequency-input input[type="number"] {
+  background: #333333;
+  border: 1px solid #555555;
+  color: #e0e0e0;
+}
+
+.dark-mode .frequency-input input[type="number"]:focus {
+  border-color: rgb(86, 154, 211);
+}
+
+.dark-mode .hz-label {
+  color: #b0b0b0;
+}
+
+.dark-mode .frequency-data {
+  background: #333333;
+  border: 1px solid #555555;
+  color: #e0e0e0;
+}
+
+.dark-mode .label {
+  color: #e0e0e0;
+}
+
+.dark-mode .frequency-warning {
+  background: #3d3d1a;
+  border-color: #5a5a2a;
+  color: #cccc66;
+}
+
+.dark-mode .frequency-hint {
+  color: #b0b0b0;
+}
+
+.dark-mode .player-controls button {
+  background: rgb(86, 154, 211);
+  color: white;
+  border: 1px solid rgb(86, 154, 211);
+}
+
+.dark-mode .player-controls button:hover:not(:disabled) {
+  background: rgba(86, 154, 211, 0.8);
+}
+
+.dark-mode .player-controls button:disabled {
+  background: #444444;
+  color: #888888;
+  border-color: #444444;
+}
+
+.dark-mode .volume-control input[type="range"],
+.dark-mode .session-duration input[type="range"] {
+  background: #333333;
+}
+
+.dark-mode .volume-control input[type="range"]::-webkit-slider-track,
+.dark-mode .session-duration input[type="range"]::-webkit-slider-track {
+  background: #555555;
+}
+
+.dark-mode .volume-control input[type="range"]::-webkit-slider-thumb,
+.dark-mode .session-duration input[type="range"]::-webkit-slider-thumb {
+  background: rgb(86, 154, 211);
+}
+
+.dark-mode .volume-control select,
+.dark-mode .session-duration select {
+  background: #333333;
+  color: #e0e0e0;
+  border: 1px solid #555555;
+}
+
+.dark-mode .volume-control select:focus,
+.dark-mode .session-duration select:focus {
+  border-color: rgb(86, 154, 211);
+}
+
+.dark-mode .volume-control label,
+.dark-mode .session-duration label,
+.dark-mode .noise-controls label {
+}
+
+.dark-mode .noise-controls input[type="range"] {
+  background: #333333;
+}
+
+.dark-mode .noise-controls input[type="range"]::-webkit-slider-track {
+  background: #555555;
+}
+
+.dark-mode .noise-controls input[type="range"]::-webkit-slider-thumb {
+  background: rgb(86, 154, 211);
+}
+
+.dark-mode .preset-card {
+  background: #2a2a2a;
+  border: 1px solid #444444;
+}
+
+.dark-mode .preset-card:hover {
+  border-color: rgb(86, 154, 211);
+}
+
+.dark-mode .preset-card h3 {
+  color: #ffffff;
+}
+
+.dark-mode .preset-card p {
+  color: #b0b0b0;
+}
+
+.dark-mode .preset-card .preset-frequency {
+  color: rgb(86, 154, 211);
+}
+
+.dark-mode .load-preset-btn {
+  background: rgb(86, 154, 211);
+  color: white;
+  border: 1px solid rgb(86, 154, 211);
+}
+
+.dark-mode .load-preset-btn:hover {
+  background: rgba(86, 154, 211, 0.8);
+}
+
+.dark-mode .session-controls {
+  background: #2a2a2a;
+  border: 1px solid #444444;
+}
+
+.dark-mode .session-controls h2 {
+  color: #ffffff !important;
+}
+
+.dark-mode .session-controls label {
+  color: #e0e0e0;
+}
+
+.dark-mode .custom-presets h2 {
+  color: #ffffff !important;
+}
+
+.dark-mode .create-preset-btn {
+  background: rgb(86, 154, 211);
+  color: white;
+  border: 1px solid rgb(86, 154, 211);
+}
+
+.dark-mode .create-preset-btn:hover {
+  background: rgba(86, 154, 211, 0.8);
+}
+
+.dark-mode .preset-form {
+  background: #2a2a2a;
+  border: 1px solid #444444;
+}
+
+.dark-mode .preset-form input[type="text"],
+.dark-mode .preset-form textarea,
+.dark-mode .preset-form input[type="number"] {
+  background: #333333;
+  border: 1px solid #555555;
+  color: #e0e0e0;
+}
+
+.dark-mode .preset-form input[type="text"]:focus,
+.dark-mode .preset-form textarea:focus,
+.dark-mode .preset-form input[type="number"]:focus {
+  border-color: rgb(86, 154, 211);
+}
+
+.dark-mode .preset-form label {
+  color: #e0e0e0;
+}
+
+.dark-mode .form-actions button {
+  background: rgb(86, 154, 211);
+  color: white;
+  border: 1px solid rgb(86, 154, 211);
+}
+
+.dark-mode .form-actions button:hover {
+  background: rgba(86, 154, 211, 0.8);
+}
+
+.dark-mode .form-actions button.cancel {
+  background: #666666;
+  color: white;
+  border: 1px solid #666666;
+}
+
+.dark-mode .form-actions button.cancel:hover {
+  background: #777777;
+}
+
+.dark-mode .delete-preset-btn {
+  background: #dc3545;
+  color: white;
+  border: 1px solid #dc3545;
+}
+
+.dark-mode .delete-preset-btn:hover {
+  background: #c82333;
 }
 </style>

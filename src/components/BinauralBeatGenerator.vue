@@ -199,6 +199,136 @@
             </div>
           </div>
         </div>
+
+        <!-- Session Plan View -->
+        <div
+          class="session-plan"
+          v-if="selectedPreset !== 'manual' && currentProgram"
+        >
+          <div class="plan-header">
+            <h4>Session Plan</h4>
+            <button
+              @click="showSessionPlan = !showSessionPlan"
+              class="toggle-plan-btn"
+              :class="{ expanded: showSessionPlan }"
+            >
+              {{ showSessionPlan ? "▼ Hide Plan" : "▶ View Full Plan" }}
+            </button>
+          </div>
+
+          <div v-if="showSessionPlan" class="plan-content">
+            <!-- Session Overview -->
+            <div class="session-overview">
+              <div class="overview-item">
+                <span class="overview-label">Total Duration:</span>
+                <span class="overview-value">{{
+                  formatTime(currentProgram.duration)
+                }}</span>
+              </div>
+              <div class="overview-item">
+                <span class="overview-label">Stages:</span>
+                <span class="overview-value">{{
+                  currentProgram.stages.length
+                }}</span>
+              </div>
+              <div class="overview-item">
+                <span class="overview-label">Type:</span>
+                <span class="overview-value">{{
+                  getProgramType(currentProgram)
+                }}</span>
+              </div>
+            </div>
+
+            <!-- Visual Progress Map -->
+            <div class="progress-map">
+              <div class="map-title">Session Progress Map</div>
+              <div class="timeline">
+                <div
+                  v-for="(stage, index) in currentProgram.stages"
+                  :key="index"
+                  class="timeline-segment"
+                  :class="{
+                    active: index === currentStageIndex && isPlaying,
+                    completed: index < currentStageIndex && isPlaying,
+                    current: index === currentStageIndex,
+                  }"
+                  :style="{ width: getStageWidthPercent(stage) + '%' }"
+                >
+                  <div class="segment-label">{{ stage.description }}</div>
+                  <div class="segment-time">
+                    {{ formatTime(stage.duration) }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Detailed Stage Information -->
+            <div class="stages-detail">
+              <div class="detail-title">Stage Details</div>
+              <div
+                v-for="(stage, index) in currentProgram.stages"
+                :key="index"
+                class="stage-detail"
+                :class="{
+                  active: index === currentStageIndex && isPlaying,
+                  completed: index < currentStageIndex && isPlaying,
+                }"
+              >
+                <div class="stage-header-detail">
+                  <div class="stage-number">{{ index + 1 }}</div>
+                  <div class="stage-info">
+                    <div class="stage-name">{{ stage.description }}</div>
+                    <div class="stage-duration">
+                      {{ formatTime(stage.duration) }}
+                    </div>
+                  </div>
+                  <div class="stage-status">
+                    <span
+                      v-if="index < currentStageIndex && isPlaying"
+                      class="status-completed"
+                      >✓</span
+                    >
+                    <span
+                      v-else-if="index === currentStageIndex && isPlaying"
+                      class="status-active"
+                      >▶</span
+                    >
+                    <span v-else class="status-pending">○</span>
+                  </div>
+                </div>
+                <div class="stage-frequencies">
+                  <div class="freq-info">
+                    <span class="freq-label">Left:</span>
+                    <span class="freq-value">{{ stage.leftFreq }} Hz</span>
+                  </div>
+                  <div class="freq-info">
+                    <span class="freq-label">Right:</span>
+                    <span class="freq-value">{{ stage.rightFreq }} Hz</span>
+                  </div>
+                  <div class="freq-info">
+                    <span class="freq-label">Beat:</span>
+                    <span class="freq-value"
+                      >{{
+                        Math.abs(stage.rightFreq - stage.leftFreq).toFixed(1)
+                      }}
+                      Hz</span
+                    >
+                  </div>
+                  <div class="freq-info">
+                    <span class="freq-label">Type:</span>
+                    <span class="freq-value">{{
+                      getBeatType(Math.abs(stage.rightFreq - stage.leftFreq))
+                    }}</span>
+                  </div>
+                  <div class="freq-info">
+                    <span class="freq-label">Volume:</span>
+                    <span class="freq-value">{{ stage.volume }}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Audio Player Controls -->
@@ -458,6 +588,7 @@ const selectedPreset = ref("manual")
 const sessionDuration = ref(0)
 const sessionStartTime = ref(0)
 const showPresetEditor = ref(false)
+const showSessionPlan = ref(false)
 const editingPreset = ref(null)
 const currentProgram = ref(null)
 const currentStageIndex = ref(0)
@@ -549,6 +680,150 @@ const presets = ref([
         leftFreq: 100,
         rightFreq: 103,
         volume: 20,
+        durationMinutes: 10,
+      },
+    ],
+  },
+  {
+    id: "deep-sleep",
+    name: "Deep Sleep",
+    description: "90-minute deep sleep program with delta waves (0.5-2 Hz)",
+    duration: 5400,
+    stages: [
+      {
+        description: "Initial Relaxation",
+        duration: 600,
+        leftFreq: 250,
+        rightFreq: 254,
+        volume: 25,
+        durationMinutes: 10,
+      },
+      {
+        description: "Theta Transition",
+        duration: 600,
+        leftFreq: 200,
+        rightFreq: 206,
+        volume: 22,
+        durationMinutes: 10,
+      },
+      {
+        description: "Light Delta",
+        duration: 1200,
+        leftFreq: 150,
+        rightFreq: 152,
+        volume: 20,
+        durationMinutes: 20,
+      },
+      {
+        description: "Deep Delta Sleep",
+        duration: 3000,
+        leftFreq: 100,
+        rightFreq: 101.5,
+        volume: 18,
+        durationMinutes: 50,
+      },
+    ],
+  },
+  {
+    id: "power-nap",
+    name: "Power Nap",
+    description: "20-minute refreshing power nap with 1.5 Hz delta waves",
+    duration: 1200,
+    stages: [
+      {
+        description: "Quick Relaxation",
+        duration: 300,
+        leftFreq: 200,
+        rightFreq: 204,
+        volume: 30,
+        durationMinutes: 5,
+      },
+      {
+        description: "Delta Rest",
+        duration: 600,
+        leftFreq: 120,
+        rightFreq: 121.5,
+        volume: 25,
+        durationMinutes: 10,
+      },
+      {
+        description: "Gentle Wake Prep",
+        duration: 300,
+        leftFreq: 150,
+        rightFreq: 153,
+        volume: 28,
+        durationMinutes: 5,
+      },
+    ],
+  },
+  {
+    id: "cellular-healing",
+    name: "Cellular Healing",
+    description: "60-minute healing session with 1-2 Hz delta frequencies",
+    duration: 3600,
+    stages: [
+      {
+        description: "Preparation",
+        duration: 600,
+        leftFreq: 180,
+        rightFreq: 184,
+        volume: 25,
+        durationMinutes: 10,
+      },
+      {
+        description: "Healing Frequencies",
+        duration: 2400,
+        leftFreq: 110,
+        rightFreq: 111.5,
+        volume: 22,
+        durationMinutes: 40,
+      },
+      {
+        description: "Integration",
+        duration: 600,
+        leftFreq: 140,
+        rightFreq: 142,
+        volume: 20,
+        durationMinutes: 10,
+      },
+    ],
+  },
+  {
+    id: "lucid-sleep-primer",
+    name: "Lucid Sleep Primer",
+    description: "45-minute cycle: Alpha → Theta → Delta for lucid dreaming",
+    duration: 2700,
+    stages: [
+      {
+        description: "Alpha Relaxation",
+        duration: 600,
+        leftFreq: 250,
+        rightFreq: 260,
+        volume: 30,
+        durationMinutes: 10,
+      },
+      {
+        description: "Alpha-Theta Bridge",
+        duration: 600,
+        leftFreq: 200,
+        rightFreq: 208,
+        volume: 28,
+        durationMinutes: 10,
+      },
+      {
+        description: "Theta Dream State",
+        duration: 900,
+        leftFreq: 150,
+        rightFreq: 156,
+        volume: 25,
+        durationMinutes: 15,
+      },
+      {
+        description: "Light Delta Sleep",
+        duration: 600,
+        leftFreq: 120,
+        rightFreq: 123,
+        volume: 22,
         durationMinutes: 10,
       },
     ],
@@ -874,6 +1149,35 @@ const formatTime = (seconds) => {
   const mins = Math.floor(seconds / 60)
   const secs = seconds % 60
   return `${mins}:${secs.toString().padStart(2, "0")}`
+}
+
+// Session plan helper methods
+const getProgramType = (program) => {
+  if (!program || !program.stages) return "Unknown"
+
+  const avgBeatFreq =
+    program.stages.reduce((sum, stage) => {
+      return sum + Math.abs(stage.rightFreq - stage.leftFreq)
+    }, 0) / program.stages.length
+
+  if (avgBeatFreq < 4) return "Delta Program"
+  if (avgBeatFreq < 8) return "Theta Program"
+  if (avgBeatFreq < 13) return "Alpha Program"
+  if (avgBeatFreq < 30) return "Beta Program"
+  return "Gamma Program"
+}
+
+const getStageWidthPercent = (stage) => {
+  if (!currentProgram.value) return 0
+  return (stage.duration / currentProgram.value.duration) * 100
+}
+
+const getBeatType = (beatFreq) => {
+  if (beatFreq < 4) return "Delta"
+  if (beatFreq < 8) return "Theta"
+  if (beatFreq < 13) return "Alpha"
+  if (beatFreq < 30) return "Beta"
+  return "Gamma"
 }
 
 // Frequency mode methods
@@ -1564,6 +1868,283 @@ onUnmounted(() => {
 .stage-time {
   font-size: 14px;
   color: #007bff;
+  font-weight: 600;
+}
+
+/* Session Plan Styles */
+.session-plan {
+  background: white;
+  padding: 15px;
+  border-radius: 4px;
+  border: 1px solid #dee2e6;
+  color: #495057;
+  margin-top: 15px;
+}
+
+.plan-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.plan-header h4 {
+  margin: 0;
+  color: #2c3e50;
+}
+
+.toggle-plan-btn {
+  background: #f8f9fa;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #495057;
+  transition: all 0.2s;
+}
+
+.toggle-plan-btn:hover {
+  background: #e9ecef;
+}
+
+.toggle-plan-btn.expanded {
+  background: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.plan-content {
+  margin-top: 15px;
+}
+
+.session-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+.overview-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.overview-label {
+  font-size: 12px;
+  color: #6c757d;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.overview-value {
+  font-size: 16px;
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.progress-map {
+  margin-bottom: 25px;
+}
+
+.map-title {
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 10px;
+}
+
+.timeline {
+  display: flex;
+  height: 60px;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid #dee2e6;
+}
+
+.timeline-segment {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: #f8f9fa;
+  border-right: 1px solid #dee2e6;
+  position: relative;
+  padding: 5px;
+  transition: all 0.3s;
+}
+
+.timeline-segment:last-child {
+  border-right: none;
+}
+
+.timeline-segment.completed {
+  background: #d4edda;
+  border-color: #c3e6cb;
+}
+
+.timeline-segment.active {
+  background: #cce7ff;
+  border-color: #007bff;
+  animation: pulse 2s infinite;
+}
+
+.timeline-segment.current {
+  background: #fff3cd;
+  border-color: #ffc107;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.segment-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #495057;
+  text-align: center;
+  line-height: 1.2;
+  margin-bottom: 2px;
+}
+
+.segment-time {
+  font-size: 10px;
+  color: #6c757d;
+}
+
+.stages-detail {
+  margin-top: 20px;
+}
+
+.detail-title {
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 15px;
+  font-size: 16px;
+}
+
+.stage-detail {
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  background: #fafafa;
+  transition: all 0.3s;
+}
+
+.stage-detail.completed {
+  background: #d4edda;
+  border-color: #c3e6cb;
+}
+
+.stage-detail.active {
+  background: #cce7ff;
+  border-color: #007bff;
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.1);
+}
+
+.stage-header-detail {
+  display: flex;
+  align-items: center;
+  padding: 12px 15px;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.stage-number {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #e9ecef;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: #495057;
+  margin-right: 12px;
+  font-size: 14px;
+}
+
+.stage-detail.completed .stage-number {
+  background: #28a745;
+  color: white;
+}
+
+.stage-detail.active .stage-number {
+  background: #007bff;
+  color: white;
+}
+
+.stage-info {
+  flex: 1;
+}
+
+.stage-name {
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 2px;
+}
+
+.stage-duration {
+  font-size: 14px;
+  color: #6c757d;
+}
+
+.stage-status {
+  margin-left: 10px;
+}
+
+.status-completed {
+  color: #28a745;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.status-active {
+  color: #007bff;
+  font-size: 16px;
+}
+
+.status-pending {
+  color: #6c757d;
+  font-size: 16px;
+}
+
+.stage-frequencies {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 10px;
+  padding: 12px 15px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.freq-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.freq-label {
+  font-size: 11px;
+  color: #6c757d;
+  margin-bottom: 2px;
+  font-weight: 600;
+}
+
+.freq-value {
+  font-size: 13px;
+  color: #2c3e50;
   font-weight: 600;
 }
 

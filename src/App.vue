@@ -23,4 +23,10 @@ body {
   min-height: 100vh;
   padding: 20px;
 }
+
+@media (max-width: 600px) {
+  #app {
+    padding: 0;
+  }
+}
 </style>

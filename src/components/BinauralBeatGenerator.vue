@@ -1662,7 +1662,7 @@ onUnmounted(() => {
 .binaural-generator {
   max-width: 800px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 10px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   color: #2c3e50;
 }
@@ -1940,6 +1940,16 @@ onUnmounted(() => {
     align-items: stretch;
   }
 
+  select {
+    padding: 8px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    background: white;
+    color: #495057;
+    height: 40px;
+    font-size: 16px;
+  }
+
   .volume-control {
     justify-content: space-between;
   }
@@ -1953,7 +1963,7 @@ onUnmounted(() => {
 /* Session Controls Styles */
 .session-controls {
   background: #f8f9fa;
-  padding: 20px;
+  padding: 5px;
   border-radius: 8px;
   border: 1px solid #e9ecef;
   color: #242424;
@@ -2680,6 +2690,7 @@ onUnmounted(() => {
 
 .dark-mode .app-header h1 {
   color: #ffffff;
+  padding: 0 20px;
 }
 
 .dark-mode .app-header p {
